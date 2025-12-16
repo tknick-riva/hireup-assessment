@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Inbox - Priority Sorter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .email {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .email.high-priority {
+            background-color: #ffebee;
+            border-color: #f44336;
+        }
+        .email.low-priority {
+            background-color: #e8f5e8;
+            border-color: #4caf50;
+        }
+        .email-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .email-subject {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .priority-score {
+            background: #333;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .email-sender {
+            color: #666;
+            font-size: 14px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 Smart Inbox</h1>
+        <p class="subtitle">Priority Email Sorter</p>
+
+        <button onclick="loadAndSortEmails()">Load & Sort Emails</button>
+        
+        <div id="status" class="status hidden"></div>
+        
+        <div id="emails-container"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/inbox/sort';
+
+        // Mock email data for testing
+        const mockEmails = [
+            {
+                "sender": "boss@company.com",
+                "subject": "URGENT: Production DB Down",
+                "body": "Please fix this immediately.",
+                "receivedAt": "2025-12-12T10:00:00Z",
+                "isVIP": true
+            },
+            {
+                "sender": "marketing@store.com",
+                "subject": "Weekly Newsletter",
+                "body": "Click here to unsubscribe.",
+                "receivedAt": "2025-12-12T09:00:00Z",
+                "isVIP": false
+            },
+            {
+                "sender": "client@example.com",
+                "subject": "Question about invoice",
+                "body": "Can we meet later?",
+                "receivedAt": "2025-12-11T10:00:00Z",
+                "isVIP": false
+            }
+        ];
+
+        async function loadAndSortEmails() {
+            const statusEl = document.getElementById('status');
+            const emailsEl = document.getElementById('emails-container');
+            
+            statusEl.className = 'status loading';
+            statusEl.textContent = 'Loading and sorting emails...';
+            statusEl.classList.remove('hidden');
+            emailsEl.innerHTML = '';
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(mockEmails)
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const sortedEmails = await response.json();
+                
+                statusEl.className = 'status success';
+                statusEl.textContent = `Successfully sorted ${sortedEmails.length} emails!`;
+                
+                displayEmails(sortedEmails);
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function displayEmails(emails) {
+            const container = document.getElementById('emails-container');
+            
+            emails.forEach(email => {
+                const emailDiv = document.createElement('div');
+                emailDiv.className = 'email';
+                
+                if (email.priorityScore > 70) {
+                    emailDiv.classList.add('high-priority');
+                } else if (email.priorityScore < 30) {
+                    emailDiv.classList.add('low-priority');
+                }
+                
+                emailDiv.innerHTML = `
+                    <div class="email-header">
+                        <div class="email-subject">${escapeHtml(email.subject)}</div>
+                        <div class="priority-score">Score: ${email.priorityScore}</div>
+                    </div>
+                    <div class="email-sender">From: ${escapeHtml(email.sender)}</div>
+                `;
+                
+                container.appendChild(emailDiv);
+            });
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
